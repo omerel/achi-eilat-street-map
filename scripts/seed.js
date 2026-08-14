@@ -1,13 +1,23 @@
 import { writeFile } from 'node:fs/promises';
-import { polygonCentroid } from './geo.js';
-import { matchesStreet, buildAddressTitle } from './address.js';
+import { polygonCentroid, distanceToPolylineMeters } from './geo.js';
+import { buildAddressTitle } from './address.js';
 
 const WFS_URL = 'https://open.govmap.gov.il/geoserver/opendata/ows';
 // Padded bounding box (EPSG:4326, minlon,minlat,maxlon,maxlat) around the
 // Achi Eilat street way in OSM, padded ~150m to catch parcels on both sides.
 const BBOX = '34.9477584,32.5793281,34.9528707,32.5830575';
-const STREET_SUBSTRING = 'אילת';
 const NOMINATIM_DELAY_MS = 1100; // Nominatim usage policy: max 1 request/second
+// Real mapped geometry of Achi Eilat street (OpenStreetMap way 122157388).
+const STREET_LINE = [
+  [34.9491584, 32.5818575],
+  [34.9497338, 32.5817306],
+  [34.9500814, 32.5815113],
+  [34.9504314, 32.5812560],
+  [34.9506277, 32.5811073],
+  [34.9508199, 32.5809753],
+  [34.9514707, 32.5805281],
+];
+const STREET_BUFFER_METERS = 55;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -50,7 +60,8 @@ async function main() {
     const address = await reverseGeocode(lon, lat);
     await sleep(NOMINATIM_DELAY_MS);
 
-    if (!matchesStreet(address.road, STREET_SUBSTRING)) continue;
+    const distanceMeters = distanceToPolylineMeters([lon, lat], STREET_LINE);
+    if (distanceMeters > STREET_BUFFER_METERS) continue;
 
     const gush = feature.properties.GUSH_NUM;
     const parcel = feature.properties.PARCEL;
@@ -66,12 +77,12 @@ async function main() {
       updated_by: '',
       updated_at: '',
     };
-    console.log(`  matched ${id} -> ${addressTitle}`);
+    console.log(`  included ${id} (${distanceMeters.toFixed(1)}m) -> ${addressTitle || '(אין כתובת ידועה)'}`);
   }
 
   await writeFile('data/parcelIds.json', JSON.stringify(parcelIds, null, 2));
   await writeFile('houses.json', JSON.stringify(houses, null, 2));
-  console.log(`Done. ${parcelIds.length} parcels matched "${STREET_SUBSTRING}" and were written.`);
+  console.log(`Done. ${parcelIds.length} parcels within ${STREET_BUFFER_METERS}m of the street were written.`);
 }
 
 main();
