@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Post-implementation note (Task 4):** Task 4's original filter (pure Nominatim road-name substring match) only matched 19 of the expected ~40 parcels because OSM's house-number tagging on this street is incomplete. It was replaced during implementation, with human sign-off, by a three-way rule: trust Nominatim when it names this street OR a confirmed different street; fall back to geometric proximity (a new `distanceToPolylineMeters` in `scripts/geo.js`, 55m threshold) only when Nominatim has no address data at all. Final result: 25 parcels, zero cross-street contamination, verified independently. See `.superpowers/sdd/2026-08-12-street-map-implementation/progress.md` for the full account. Tasks 3 and 4 below still describe the original (superseded) filter text — left as-is for history; the code and the note above are authoritative.
+
 **Goal:** Build and deploy a free, zero-cost community website that shows the ~40 houses on Achi Eilat street (Zichron Yaakov) as clickable cadastral parcels on a map, with editable owner/contact info protected by a shared password.
 
 **Architecture:** Static single-page site (Leaflet.js, no framework) hosted on GitHub Pages. Reads: government WFS (parcel polygons), Esri World Imagery (aerial basemap), and `houses.json` from `raw.githubusercontent.com`. Writes: a small Cloudflare Worker that checks a shared password and commits updates to `houses.json` via the GitHub Contents API using a scoped token.
