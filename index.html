@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>מפת שכונה - אח"י אילת</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="map"></div>
+
+  <dialog id="edit-dialog">
+    <form id="edit-form" method="dialog">
+      <h2 id="edit-dialog-title">עריכת פרטי בית</h2>
+      <label>
+        כתובת
+        <input type="text" name="address_title">
+      </label>
+      <label>
+        שמות דיירים
+        <input type="text" name="residents">
+      </label>
+      <label>
+        טלפון
+        <input type="text" name="phone">
+      </label>
+      <label>
+        הערת קשר
+        <input type="text" name="contact_note">
+      </label>
+      <label>
+        השם שלך (מי מעדכן)
+        <input type="text" name="updated_by" required>
+      </label>
+      <label>
+        סיסמת השכונה
+        <input type="password" name="password" required>
+      </label>
+      <p id="edit-error" class="error"></p>
+      <div class="dialog-actions">
+        <button type="submit">שמור</button>
+        <button type="button" id="edit-cancel">ביטול</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
