@@ -198,5 +198,13 @@
     "contact_note": "",
     "updated_by": "",
     "updated_at": ""
+  },
+  "TEST--0": {
+    "address_title": "בדיקה",
+    "residents": "בדיקת מערכת",
+    "phone": "",
+    "contact_note": "",
+    "updated_by": "בדיקה אוטומטית",
+    "updated_at": "2026-08-14T19:31:43.096Z"
   }
 }
