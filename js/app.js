@@ -154,8 +154,18 @@ function renderParcels(featureCollection) {
   }).addTo(map);
 }
 
+function showMapLoadError() {
+  document.getElementById('map').textContent = 'שגיאה בטעינת המפה, נסו לרענן את הדף';
+}
+
 async function loadData() {
-  const parcelIds = await fetch(PARCEL_IDS_URL).then((r) => r.json());
+  let parcelIds;
+  try {
+    parcelIds = await fetch(PARCEL_IDS_URL).then((r) => r.json());
+  } catch {
+    showMapLoadError();
+    return;
+  }
 
   try {
     housesData = await fetch(HOUSES_JSON_URL).then((r) => r.json());
@@ -172,7 +182,14 @@ async function loadData() {
     srsName: 'EPSG:4326',
     CQL_FILTER: buildCqlFilter(parcelIds),
   });
-  const featureCollection = await fetch(`${WFS_URL}?${params.toString()}`).then((r) => r.json());
+
+  let featureCollection;
+  try {
+    featureCollection = await fetch(`${WFS_URL}?${params.toString()}`).then((r) => r.json());
+  } catch {
+    showMapLoadError();
+    return;
+  }
   renderParcels(featureCollection);
 }
 
