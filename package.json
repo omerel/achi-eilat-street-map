@@ -1,0 +1,9 @@
+{
+  "name": "achi-eilat-street-map",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "seed": "node scripts/seed.js"
+  }
+}
