@@ -1,11 +1,12 @@
 import { writeFile } from 'node:fs/promises';
 import { polygonCentroid, distanceToPolylineMeters } from './geo.js';
-import { buildAddressTitle } from './address.js';
+import { matchesStreet, buildAddressTitle } from './address.js';
 
 const WFS_URL = 'https://open.govmap.gov.il/geoserver/opendata/ows';
 // Padded bounding box (EPSG:4326, minlon,minlat,maxlon,maxlat) around the
 // Achi Eilat street way in OSM, padded ~150m to catch parcels on both sides.
 const BBOX = '34.9477584,32.5793281,34.9528707,32.5830575';
+const STREET_SUBSTRING = 'אילת';
 const NOMINATIM_DELAY_MS = 1100; // Nominatim usage policy: max 1 request/second
 // Real mapped geometry of Achi Eilat street (OpenStreetMap way 122157388).
 const STREET_LINE = [
@@ -61,7 +62,11 @@ async function main() {
     await sleep(NOMINATIM_DELAY_MS);
 
     const distanceMeters = distanceToPolylineMeters([lon, lat], STREET_LINE);
-    if (distanceMeters > STREET_BUFFER_METERS) continue;
+    const isOnStreet = matchesStreet(address.road, STREET_SUBSTRING);
+    const isConfirmedElsewhere = Boolean(address.road) && !isOnStreet;
+    const withinBuffer = distanceMeters <= STREET_BUFFER_METERS;
+    const include = isOnStreet || (!isConfirmedElsewhere && withinBuffer);
+    if (!include) continue;
 
     const gush = feature.properties.GUSH_NUM;
     const parcel = feature.properties.PARCEL;
@@ -77,12 +82,13 @@ async function main() {
       updated_by: '',
       updated_at: '',
     };
-    console.log(`  included ${id} (${distanceMeters.toFixed(1)}m) -> ${addressTitle || '(אין כתובת ידועה)'}`);
+    const reason = isOnStreet ? 'nominatim' : 'geometry-fallback';
+    console.log(`  included ${id} (${distanceMeters.toFixed(1)}m, ${reason}) -> ${addressTitle || '(אין כתובת ידועה)'}`);
   }
 
   await writeFile('data/parcelIds.json', JSON.stringify(parcelIds, null, 2));
   await writeFile('houses.json', JSON.stringify(houses, null, 2));
-  console.log(`Done. ${parcelIds.length} parcels within ${STREET_BUFFER_METERS}m of the street were written.`);
+  console.log(`Done. ${parcelIds.length} parcels matched "${STREET_SUBSTRING}" or fell within ${STREET_BUFFER_METERS}m of the street with no conflicting address, and were written.`);
 }
 
 main();
