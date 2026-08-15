@@ -1,6 +1,14 @@
 import { checkPassword, buildUpdatedHouses, encodeBase64Utf8, decodeBase64Utf8 } from './github.js';
 
 const GITHUB_API = 'https://api.github.com';
+const PARCEL_ID_PATTERN = /^\d+--\d+$/;
+const FIELD_LIMITS = {
+  address_title: 100,
+  residents: 200,
+  phone: 50,
+  contact_note: 500,
+  updated_by: 100,
+};
 
 export default {
   async fetch(request, env) {
@@ -16,7 +24,7 @@ export default {
       return jsonResponse({ error: 'invalid_json' }, 400);
     }
 
-    const { parcelId, password, address_title, residents, phone, contact_note, updated_by } = body;
+    const { parcelId, password } = body;
 
     if (!checkPassword(password, env.SHARED_PASSWORD)) {
       return jsonResponse({ error: 'invalid_password' }, 403);
@@ -24,8 +32,23 @@ export default {
     if (typeof parcelId !== 'string' || parcelId.length === 0) {
       return jsonResponse({ error: 'missing_parcel_id' }, 400);
     }
+    if (!PARCEL_ID_PATTERN.test(parcelId)) {
+      return jsonResponse({ error: 'invalid_parcel_id' }, 400);
+    }
 
-    const fields = { address_title, residents, phone, contact_note, updated_by };
+    const fields = {};
+    for (const [key, maxLength] of Object.entries(FIELD_LIMITS)) {
+      const value = body[key];
+      if (value === undefined || value === null) continue;
+      if (typeof value !== 'string') {
+        return jsonResponse({ error: 'invalid_field', field: key }, 400);
+      }
+      const trimmed = value.trim();
+      if (trimmed.length > maxLength) {
+        return jsonResponse({ error: 'field_too_long', field: key }, 400);
+      }
+      fields[key] = trimmed;
+    }
     const updatedAt = new Date().toISOString();
     const contentsUrl = `${GITHUB_API}/repos/${env.GITHUB_REPO}/contents/houses.json`;
 
