@@ -53,28 +53,39 @@ export default {
     const contentsUrl = `${GITHUB_API}/repos/${env.GITHUB_REPO}/contents/houses.json`;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const getResponse = await fetch(contentsUrl, { headers: githubHeaders(env) });
+      let getResponse;
+      try {
+        getResponse = await fetch(contentsUrl, { headers: githubHeaders(env) });
+      } catch {
+        return jsonResponse({ error: 'github_unreachable' }, 502);
+      }
       if (!getResponse.ok) return jsonResponse({ error: 'github_read_failed' }, 502);
       const getData = await getResponse.json();
       const existingHouses = JSON.parse(decodeBase64Utf8(getData.content));
       const updatedHouses = buildUpdatedHouses(existingHouses, parcelId, fields, updatedAt);
 
-      const putResponse = await fetch(contentsUrl, {
-        method: 'PUT',
-        headers: githubHeaders(env),
-        body: JSON.stringify({
-          message: `עדכון פרטי בית ${parcelId}`,
-          content: encodeBase64Utf8(JSON.stringify(updatedHouses, null, 2)),
-          sha: getData.sha,
-        }),
-      });
+      let putResponse;
+      try {
+        putResponse = await fetch(contentsUrl, {
+          method: 'PUT',
+          headers: githubHeaders(env),
+          body: JSON.stringify({
+            message: `עדכון פרטי בית ${parcelId}`,
+            content: encodeBase64Utf8(JSON.stringify(updatedHouses, null, 2)),
+            sha: getData.sha,
+          }),
+        });
+      } catch {
+        return jsonResponse({ error: 'github_unreachable' }, 502);
+      }
 
-      if (putResponse.status === 409 && attempt === 0) continue; // stale sha, retry once
+      if (putResponse.status === 409) {
+        if (attempt === 0) continue; // stale sha, retry once
+        return jsonResponse({ error: 'conflict_retry_failed' }, 409);
+      }
       if (!putResponse.ok) return jsonResponse({ error: 'github_write_failed' }, 502);
       return jsonResponse(updatedHouses[parcelId], 200);
     }
-
-    return jsonResponse({ error: 'conflict_retry_failed' }, 409);
   },
 };
 
