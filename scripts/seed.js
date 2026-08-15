@@ -117,6 +117,23 @@ async function main() {
     }
   }
 
+  // Union back in any previously-seeded parcels that have real resident data
+  // but didn't reappear in this run's fresh WFS/Nominatim results (live
+  // geocoding data can shift between runs) -- otherwise their data would be
+  // silently dropped even though nothing about the parcel itself changed.
+  let droppedButKeptCount = 0;
+  for (const [id, existingEntry] of Object.entries(existingHouses)) {
+    if (houses[id]) continue; // already handled above
+    if (!hasResidentData(existingEntry)) continue;
+    mergedHouses[id] = existingEntry;
+    const [gushStr, parcelStr] = id.split('--');
+    parcelIds.push({ id, gush: Number(gushStr), parcel: Number(parcelStr) });
+    droppedButKeptCount += 1;
+  }
+  if (droppedButKeptCount > 0) {
+    console.log(`kept ${droppedButKeptCount} previously-seeded parcels with resident data that did not reappear in this run`);
+  }
+
   await writeFile('data/parcelIds.json', JSON.stringify(parcelIds, null, 2));
   await writeFile('houses.json', JSON.stringify(mergedHouses, null, 2));
   console.log(`Done. ${parcelIds.length} parcels matched "${STREET_SUBSTRING}" or fell within ${STREET_BUFFER_METERS}m of the street with no conflicting address, and were written.`);
