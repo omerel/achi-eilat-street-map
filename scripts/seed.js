@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { polygonCentroid, distanceToPolylineMeters } from './geo.js';
 import { matchesStreet, buildAddressTitle } from './address.js';
 
@@ -48,6 +48,22 @@ async function reverseGeocode(lon, lat) {
   return data.address || {};
 }
 
+async function loadExistingHouses() {
+  try {
+    const raw = await readFile('houses.json', 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return {}; // first-ever run, or file not present -- nothing to preserve
+  }
+}
+
+function hasResidentData(entry) {
+  if (!entry) return false;
+  return [entry.residents, entry.phone, entry.contact_note, entry.updated_by].some(
+    (value) => typeof value === 'string' && value.trim().length > 0,
+  );
+}
+
 async function main() {
   console.log('Fetching parcels from GovMap WFS...');
   const features = await fetchParcelsInBbox();
@@ -86,9 +102,25 @@ async function main() {
     console.log(`  included ${id} (${distanceMeters.toFixed(1)}m, ${reason}) -> ${addressTitle || '(אין כתובת ידועה)'}`);
   }
 
+  const existingHouses = await loadExistingHouses();
+  const mergedHouses = {};
+  let preservedCount = 0;
+  let freshCount = 0;
+  for (const [id, freshEntry] of Object.entries(houses)) {
+    const existingEntry = existingHouses[id];
+    if (hasResidentData(existingEntry)) {
+      mergedHouses[id] = existingEntry;
+      preservedCount += 1;
+    } else {
+      mergedHouses[id] = freshEntry;
+      freshCount += 1;
+    }
+  }
+
   await writeFile('data/parcelIds.json', JSON.stringify(parcelIds, null, 2));
-  await writeFile('houses.json', JSON.stringify(houses, null, 2));
+  await writeFile('houses.json', JSON.stringify(mergedHouses, null, 2));
   console.log(`Done. ${parcelIds.length} parcels matched "${STREET_SUBSTRING}" or fell within ${STREET_BUFFER_METERS}m of the street with no conflicting address, and were written.`);
+  console.log(`houses.json: preserved ${preservedCount} existing entries with resident data, wrote ${freshCount} new/unchanged entries.`);
 }
 
 main();
