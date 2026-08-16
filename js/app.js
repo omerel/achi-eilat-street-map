@@ -154,7 +154,12 @@ function renderParcels(featureCollection) {
   }).addTo(map);
 }
 
+function hideLoadingIndicator() {
+  document.getElementById('map-loading').classList.add('hidden');
+}
+
 function showMapLoadError() {
+  hideLoadingIndicator();
   document.getElementById('map').textContent = 'שגיאה בטעינת המפה, נסו לרענן את הדף';
 }
 
@@ -190,6 +195,7 @@ async function loadData() {
     showMapLoadError();
     return;
   }
+  hideLoadingIndicator();
   renderParcels(featureCollection);
 }
 

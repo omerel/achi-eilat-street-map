@@ -10,6 +10,26 @@ html, body {
   height: 100vh;
 }
 
+#map-loading {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  color: #222;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-width: 90%;
+  text-align: center;
+}
+
+#map-loading.hidden {
+  display: none;
+}
+
 dialog {
   border: none;
   border-radius: 8px;
